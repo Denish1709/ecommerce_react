@@ -1,5 +1,4 @@
 import { useState } from "react";
-import axios from "axios";
 import {
   Container,
   Title,
@@ -10,11 +9,13 @@ import {
   Divider,
   Button,
   Group,
+  Image,
 } from "@mantine/core";
+import { Dropzone, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { Link, useNavigate } from "react-router-dom";
 import { notifications } from "@mantine/notifications";
-import { useQueryClient, useMutation } from "@tanstack/react-query";
-import { addProduct } from "../api";
+import { useMutation } from "@tanstack/react-query";
+import { addProduct, uploadProductImage } from "../api/api";
 
 function ProductAdd() {
   const navigate = useNavigate();
@@ -23,18 +24,16 @@ function ProductAdd() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
+  const [image, setImage] = useState("");
 
   // create mutation
   const createMutation = useMutation({
     mutationFn: addProduct,
     onSuccess: () => {
-      // when the movie is created
-      // show add success message
       notifications.show({
-        title: "Product Added",
+        title: "New Product Added",
         color: "green",
       });
-      // redirect back to home page
       navigate("/");
     },
     onError: (error) => {
@@ -46,7 +45,7 @@ function ProductAdd() {
     },
   });
 
-  const handleAddNewProduct = async (event) => {
+  const handleAddNewPrdouct = async (event) => {
     event.preventDefault();
     createMutation.mutate(
       JSON.stringify({
@@ -54,36 +53,26 @@ function ProductAdd() {
         description: description,
         price: price,
         category: category,
+        image: image,
       })
     );
-    // try {
-    //   await axios({
-    //     method: "POST",
-    //     url: "https://curly-tribble-vg976vg6pp3j5p-5000.app.github.dev/movies",
-    //     headers: {
-    //       "Content-Type": "application/json"
-    //     },
-    //     data: JSON.stringify({
-    //       title: title,
-    //       director: director,
-    //       release_year: releaseYear,
-    //       genre: genre,
-    //       rating: rating
-    //     })
-    //   });
-    //   // show add success message
-    //   notifications.show({
-    //     title: "Movie Added",
-    //     color: "green"
-    //   });
-    //   // redirect back to home page
-    //   navigate("/");
-    // } catch (error) {
-    //   notifications.show({
-    //     title: error.response.data.message,
-    //     color: "red"
-    //   });
-    // }
+  };
+
+  const uploadMutation = useMutation({
+    mutationFn: uploadProductImage,
+    onSuccess: (data) => {
+      setImage(data.image_url);
+    },
+    onError: (error) => {
+      notifications.show({
+        title: error.response.data.message,
+        color: "red",
+      });
+    },
+  });
+
+  const handleImageUpload = (files) => {
+    uploadMutation.mutate(files[0]);
   };
 
   return (
@@ -107,22 +96,51 @@ function ProductAdd() {
         <Space h="20px" />
         <TextInput
           value={description}
-          placeholder="Enter the movie description here"
+          placeholder="Enter the description here"
           label="Description"
-          description="The description of the product"
+          description="The description for the product"
           withAsterisk
           onChange={(event) => setDescription(event.target.value)}
         />
         <Space h="20px" />
         <Divider />
         <Space h="20px" />
+        {image !== "" ? (
+          <>
+            <Image
+              src={
+                "https://musical-space-halibut-vg976vgvqrc69x-5000.app.github.dev/" +
+                image
+              }
+              width="100%"
+            />
+            <Button color="dark" mt="15px" onClick={() => setImage("")}>
+              Remove Image
+            </Button>
+          </>
+        ) : (
+          <Dropzone
+            multiple={false}
+            accept={IMAGE_MIME_TYPE}
+            onDrop={(files) => {
+              handleImageUpload(files);
+            }}
+          >
+            <Title order={4} align="center" py="20px">
+              Click to upload or Drag image to upload
+            </Title>
+          </Dropzone>
+        )}
+        <Space h="20px" />
+        <Divider />
+        <Space h="20px" />
         <NumberInput
           value={price}
           placeholder="Enter the price here"
-          label="Price"
-          description="The price of the product"
-          withAsterisk
+          label="Price(USD)"
           precision={2}
+          description="What is a price"
+          withAsterisk
           onChange={setPrice}
         />
         <Space h="20px" />
@@ -130,24 +148,25 @@ function ProductAdd() {
         <Space h="20px" />
         <TextInput
           value={category}
-          placeholder="Enter the category here"
+          placeholder="Enter the category at here"
           label="Category"
-          description="The category of the product"
+          description="What is the category for this"
           withAsterisk
           onChange={(event) => setCategory(event.target.value)}
         />
+
         <Space h="20px" />
-        <Button fullWidth onClick={handleAddNewProduct}>
-          Add New Product
+        <Button fullWidth onClick={handleAddNewPrdouct}>
+          Add New
         </Button>
       </Card>
-      <Space h="20px" />
+      <Space h="50px" />
       <Group position="center">
         <Button component={Link} to="/" variant="subtle" size="xs" color="gray">
           Go back to Home
         </Button>
       </Group>
-      <Space h="100px" />
+      <Space h="50px" />
     </Container>
   );
 }

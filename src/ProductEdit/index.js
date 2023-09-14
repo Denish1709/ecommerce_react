@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import {
   Container,
@@ -6,24 +6,29 @@ import {
   Space,
   Card,
   TextInput,
+  Textarea,
   NumberInput,
   Divider,
   Button,
   Group,
-  LoadingOverlay,
+  Image,
 } from "@mantine/core";
+import { Dropzone, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { notifications } from "@mantine/notifications";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { updateProduct, getProduct } from "../api";
+import { getProduct, updateProduct, uploadProductImage } from "../api/api";
 
-function ProductEdit() {
+function ProductsEdit() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
+  const [image, setImage] = useState("");
+  const [uploading, setUploading] = useState(false);
+
   const { isLoading } = useQuery({
     queryKey: ["product", id],
     queryFn: () => getProduct(id),
@@ -32,39 +37,16 @@ function ProductEdit() {
       setDescription(data.description);
       setPrice(data.price);
       setCategory(data.category);
+      setImage(data.image);
     },
   });
-
-  // useEffect(() => {
-  //   axios
-  //     .get(
-  //       "https://curly-tribble-vg976vg6pp3j5p-5000.app.github.dev/movies/" + id
-  //     )
-  //     .then((response) => {
-  //       // set value for every fields
-  //       setTitle(response.data.title);
-  //       setDirector(response.data.director);
-  //       setReleaseYear(response.data.release_year);
-  //       setGenre(response.data.genre);
-  //       setRating(response.data.rating);
-  //     })
-  //     .catch((error) => {
-  //       notifications.show({
-  //         title: error.response.data.message,
-  //         color: "red"
-  //       });
-  //     });
-  // }, []);
-
   const updateMutation = useMutation({
     mutationFn: updateProduct,
     onSuccess: () => {
-      // show add success message
       notifications.show({
         title: "Product Edited",
         color: "green",
       });
-      // redirect back to home page
       navigate("/");
     },
     onError: (error) => {
@@ -74,8 +56,7 @@ function ProductEdit() {
       });
     },
   });
-
-  const handleUpdateProduct = async (event) => {
+  const handleUpdateProducts = async (event) => {
     event.preventDefault();
     updateMutation.mutate({
       id: id,
@@ -84,38 +65,27 @@ function ProductEdit() {
         description: description,
         price: price,
         category: category,
+        image: image,
       }),
     });
-    // try {
-    //   await axios({
-    //     method: "PUT",
-    //     url:
-    //       "https://curly-tribble-vg976vg6pp3j5p-5000.app.github.dev/movies/" +
-    //       id,
-    //     headers: {
-    //       "Content-Type": "application/json"
-    //     },
-    //     data: JSON.stringify({
-    //       title: title,
-    //       director: director,
-    //       release_year: releaseYear,
-    //       genre: genre,
-    //       rating: rating
-    //     })
-    //   });
-    //   // show add success message
-    //   notifications.show({
-    //     title: "Movie Edited",
-    //     color: "green"
-    //   });
-    //   // redirect back to home page
-    //   navigate("/");
-    // } catch (error) {
-    //   notifications.show({
-    //     title: error.response.data.message,
-    //     color: "red"
-    //   });
-    // }
+  };
+
+  const uploadMutation = useMutation({
+    mutationFn: uploadProductImage,
+    onSuccess: (data) => {
+      setImage(data.image_url);
+    },
+    onError: (error) => {
+      notifications.show({
+        title: error.response.data.message,
+        color: "red",
+      });
+    },
+  });
+
+  const handleImageUpload = (files) => {
+    uploadMutation.mutate(files[0]);
+    setUploading(true);
   };
 
   return (
@@ -126,24 +96,47 @@ function ProductEdit() {
       </Title>
       <Space h="50px" />
       <Card withBorder shadow="md" p="20px">
-        <LoadingOverlay visible={isLoading} />
         <TextInput
           value={name}
-          placeholder="Enter the product name here"
+          placeholder="Enter the product title here"
           label="Name"
-          description="The name of the Product"
+          description="The title of the product"
           withAsterisk
           onChange={(event) => setName(event.target.value)}
         />
         <Space h="20px" />
         <Divider />
         <Space h="20px" />
-        <TextInput
+        {image && image !== "" ? (
+          <>
+            <Image src={"http://localhost:5000/" + image} width="100%" />
+            <Button color="dark" mt="15px" onClick={() => setImage("")}>
+              Remove Image
+            </Button>
+          </>
+        ) : (
+          <Dropzone
+            multiple={false}
+            accept={IMAGE_MIME_TYPE}
+            onDrop={(files) => {
+              handleImageUpload(files);
+            }}
+          >
+            <Title order={4} align="center" py="20px">
+              Click to upload or Drag image to upload
+            </Title>
+          </Dropzone>
+        )}
+        <Space h="20px" />
+        <Divider />
+        <Space h="20px" />
+        <Textarea
           value={description}
           placeholder="Enter the product description here"
-          label="Description"
+          label="description"
           description="The description of the product"
           withAsterisk
+          minRows={5}
           onChange={(event) => setDescription(event.target.value)}
         />
         <Space h="20px" />
@@ -153,9 +146,9 @@ function ProductEdit() {
           value={price}
           placeholder="Enter the price here"
           label="Price"
+          precision={2}
           description="The price of the product"
           withAsterisk
-          precision={2}
           onChange={setPrice}
         />
         <Space h="20px" />
@@ -167,11 +160,11 @@ function ProductEdit() {
           label="Category"
           description="The category of the product"
           withAsterisk
-          onChange={(event) => setCategory(event.target.value)}
+          onChange={setCategory}
         />
         <Space h="20px" />
-        <Button fullWidth onClick={handleUpdateProduct}>
-          Update
+        <Button fullWidth onClick={handleUpdateProducts}>
+          Edit Product
         </Button>
       </Card>
       <Space h="20px" />
@@ -184,4 +177,4 @@ function ProductEdit() {
     </Container>
   );
 }
-export default ProductEdit;
+export default ProductsEdit;

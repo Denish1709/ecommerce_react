@@ -1,11 +1,10 @@
 import axios from "axios";
 
-export const fetchProducts = async (category) => {
+const API_URL = "http://localhost:5000";
+
+export const fetchProducts = async () => {
   // 3. trigger new API
-  const response = await axios.get(
-    "http://localhost:5000/products?" +
-      (category !== "" ? "category=" + category : "")
-  );
+  const response = await axios.get(API_URL + "/products");
   return response.data; // movies data from express
 };
 
@@ -17,7 +16,7 @@ export const getProduct = async (id) => {
 export const addProduct = async (data) => {
   const response = await axios({
     method: "POST",
-    url: "http://localhost:5000/products",
+    url: API_URL + "/products",
     headers: {
       "Content-Type": "application/json",
     },
@@ -26,10 +25,25 @@ export const addProduct = async (data) => {
   return response.data;
 };
 
+export const uploadProductImage = async (file) => {
+  const formData = new FormData();
+  formData.append("image", file);
+  console.log(formData);
+  const response = await axios({
+    method: "POST",
+    url: API_URL + "/images",
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+    data: formData,
+  });
+  return response.data;
+};
+
 export const updateProduct = async ({ id, data }) => {
   const response = await axios({
     method: "PUT",
-    url: "http://localhost:5000/products/" + id,
+    url: API_URL + "/products/" + id,
     headers: {
       "Content-Type": "application/json",
     },
@@ -41,7 +55,7 @@ export const updateProduct = async ({ id, data }) => {
 export const deleteProduct = async (product_id = "") => {
   const response = await axios({
     method: "DELETE",
-    url: "http://localhost:5000/products/" + product_id,
+    url: API_URL + "/products/" + product_id,
   });
   return response.data;
 };
