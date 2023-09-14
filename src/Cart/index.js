@@ -4,6 +4,7 @@ import { getCartItems } from "../api/cart";
 import { Container, Title, Table, Group, Button, Image } from "@mantine/core";
 import { Checkbox } from "@mantine/core";
 import Header from "../Header";
+import { Link } from "react-router-dom";
 
 export default function Cart() {
   const queryClient = useQueryClient();
@@ -136,7 +137,7 @@ export default function Cart() {
         </tbody>
       </Table>
       <Group>
-        {/* <Button component={Link} to={""} color="blue" size="xs" radius="50px"> */}
+        <Button component={Link} to={""} color="red" size="md">
           Delete
         </Button>
       </Group>
