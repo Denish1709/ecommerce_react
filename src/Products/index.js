@@ -11,11 +11,16 @@ import {
   LoadingOverlay,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
+import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchProducts, deleteProduct } from "../api/api";
 import { addToCart, getCartItems } from "../api/cart";
+import { useCookies } from "react-cookie";
 
 function Products() {
+  const [cookies] = useCookies(["currentUser"]);
+  const { currentUser } = cookies;
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [currentProducts, setCurrentProducts] = useState([]);
   const [category, setCategory] = useState("");
@@ -25,12 +30,20 @@ function Products() {
   const [totalPages, setTotalPages] = useState([]);
   const { isLoading, data: products } = useQuery({
     queryKey: ["products"],
-    queryFn: () => fetchProducts(),
+    queryFn: () => fetchProducts(currentUser ? currentUser.token : ""),
   });
   const { data: cart = [] } = useQuery({
     queryKey: ["cart"],
     queryFn: getCartItems,
   });
+
+  const isAdmin = useMemo(() => {
+    return cookies &&
+      cookies.currentUser &&
+      cookies.currentUser.role === "admin"
+      ? true
+      : false;
+  }, [cookies]);
 
   useEffect(() => {
     /* 
@@ -151,9 +164,11 @@ function Products() {
         <Title order={3} align="center">
           Products
         </Title>
-        <Button component={Link} to="/product_add" color="green">
-          Add New
-        </Button>
+        {isAdmin && (
+          <Button component={Link} to="/product_add" color="green">
+            Add New
+          </Button>
+        )}
       </Group>
       <Space h="20px" />
       <Group>
@@ -188,12 +203,13 @@ function Products() {
           value={perPage}
           onChange={(event) => {
             setPerPage(parseInt(event.target.value));
+            // reset it back to page 1
             setCurrentPage(1);
           }}
         >
           <option value="6">6 Per Page</option>
           <option value="10">10 Per Page</option>
-          <option value={999999999}>All</option>
+          <option value={9999999}>All</option>
         </select>
       </Group>
       <Space h="20px" />
@@ -202,7 +218,7 @@ function Products() {
         {currentProducts
           ? currentProducts.map((product) => {
               return (
-                <Grid.Col key={product._id} lg={4} md={6} sm={12}>
+                <Grid.Col key={product._id} lg={4} md={6} sm={6} xs={6}>
                   <Card withBorder shadow="sm" p="20px">
                     <Title order={5}>{product.name}</Title>
                     <Space h="20px" />
@@ -214,34 +230,60 @@ function Products() {
                     <Button
                       fullWidth
                       onClick={() => {
-                        addToCartMutation.mutate(product);
+                        if (cookies && cookies.currentUser) {
+                          addToCartMutation.mutate(product);
+                        } else {
+                          notifications.show({
+                            title: "Please login to proceed",
+                            message: (
+                              <>
+                                <Button
+                                  color="red"
+                                  onClick={() => {
+                                    navigate("/login");
+                                    notifications.clean();
+                                  }}
+                                >
+                                  Click here to login
+                                </Button>
+                              </>
+                            ),
+                          });
+                        }
                       }}
                     >
                       {" "}
                       Add To Cart
                     </Button>
-                    <Space h="20px" />
-                    <Group position="apart">
-                      <Button
-                        component={Link}
-                        to={"/products/" + product._id}
-                        color="blue"
-                        size="xs"
-                        radius="50px"
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        color="red"
-                        size="xs"
-                        radius="50px"
-                        onClick={() => {
-                          deleteMutation.mutate(product._id);
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    </Group>
+                    {isAdmin && (
+                      <>
+                        <Space h="20px" />
+                        <Group position="apart">
+                          <Button
+                            component={Link}
+                            to={"/products/" + product._id}
+                            color="blue"
+                            size="xs"
+                            radius="50px"
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            color="red"
+                            size="xs"
+                            radius="50px"
+                            onClick={() => {
+                              deleteMutation.mutate({
+                                id: product._id,
+                                token: currentUser ? currentUser.token : "",
+                              });
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </Group>
+                      </>
+                    )}
                   </Card>
                 </Grid.Col>
               );
@@ -250,6 +292,13 @@ function Products() {
       </Grid>
       <Space h="40px" />
       <div>
+        <span
+          style={{
+            marginRight: "10px",
+          }}
+        >
+          Page {currentPage} of {totalPages.length}
+        </span>
         {totalPages.map((page) => {
           return (
             <button

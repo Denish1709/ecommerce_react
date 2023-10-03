@@ -15,9 +15,12 @@ import { Dropzone, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { Link, useNavigate } from "react-router-dom";
 import { notifications } from "@mantine/notifications";
 import { useMutation } from "@tanstack/react-query";
+import { useCookies } from "react-cookie";
 import { addProduct, uploadProductImage } from "../api/api";
 
 function ProductAdd() {
+  const [cookies] = useCookies(["currentUser"]);
+  const { currentUser } = cookies;
   const navigate = useNavigate();
   // const queryClient = useQueryClient();
   const [name, setName] = useState("");
@@ -47,15 +50,16 @@ function ProductAdd() {
 
   const handleAddNewPrdouct = async (event) => {
     event.preventDefault();
-    createMutation.mutate(
-      JSON.stringify({
+    createMutation.mutate({
+      data: JSON.stringify({
         name: name,
         description: description,
         price: price,
         category: category,
         image: image,
-      })
-    );
+      }),
+      token: currentUser ? currentUser.token : "",
+    });
   };
 
   const uploadMutation = useMutation({

@@ -17,9 +17,12 @@ import { Dropzone, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { notifications } from "@mantine/notifications";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useCookies } from "react-cookie";
 import { getProduct, updateProduct, uploadProductImage } from "../api/api";
 
 function ProductsEdit() {
+  const [cookies] = useCookies(["currentUser"]);
+  const { currentUser } = cookies;
   const { id } = useParams();
   const navigate = useNavigate();
   const [name, setName] = useState("");
@@ -67,6 +70,7 @@ function ProductsEdit() {
         category: category,
         image: image,
       }),
+      token: currentUser ? currentUser.token : "",
     });
   };
 
